@@ -4,6 +4,8 @@
 
 #include "pch.h"
 #include "Game.h"
+#include <sstream>
+#include <SimpleMath.h>
 
 extern void ExitGame();
 
@@ -36,6 +38,11 @@ void Game::Initialize(HWND window, int width, int height)
     m_timer.SetFixedTimeStep(true);
     m_timer.SetTargetElapsedSeconds(1.0 / 60);
     */
+
+	m_spriteBatch = std::make_unique<SpriteBatch>(m_d3dContext.Get());
+	m_spriteFont = std::make_unique<SpriteFont>(m_d3dDevice.Get(), L"Resources\\myfile.spritefont");
+
+	m_cnt = 0;
 }
 
 // Executes the basic game loop.
@@ -56,6 +63,22 @@ void Game::Update(DX::StepTimer const& timer)
 
     // TODO: Add your game logic here.
     elapsedTime;
+
+	// カウンタを進める
+	m_cnt++;
+	std::wstringstream ss;
+
+	// ストリングストリームに出力
+	ss << "m_cnt:" << m_cnt;
+
+	// 文字列を取得
+	m_str = ss.str();
+
+
+	// 文字列を代入
+	// m_str = L"aaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+	
 }
 
 // Draws the scene.
@@ -68,10 +91,23 @@ void Game::Render()
     }
 
     Clear();
+	static float x = 0;
+	static float y = 0;
+	x += 0.1f;
+	y += 0.1f;
+
 
     // TODO: Add your rendering code here.
+	m_spriteBatch->Begin();
+
+	m_spriteFont->DrawString(m_spriteBatch.get(), m_str.c_str(), XMFLOAT2(cos(x)*200, sin(y)*200),Colors::Red, m_cnt/10.0f,
+		DirectX::SimpleMath::Vector2(0.5f, 0.5f), DirectX::SimpleMath::Vector2(3.0f, 3.0f));
+
+	m_spriteBatch->End();
 
     Present();
+
+
 }
 
 // Helper method to clear the back buffers.
