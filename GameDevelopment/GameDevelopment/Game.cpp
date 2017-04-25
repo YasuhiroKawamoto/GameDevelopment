@@ -5,7 +5,10 @@
 #include "pch.h"
 #include "Game.h"
 #include <sstream>
-#include <SimpleMath.h>
+#include <WICTextureLoader.h>
+#include <DDSTextureLoader.h>
+#include <CommonStates.h>
+
 
 extern void ExitGame();
 
@@ -43,6 +46,36 @@ void Game::Initialize(HWND window, int width, int height)
 	m_spriteFont = std::make_unique<SpriteFont>(m_d3dDevice.Get(), L"Resources\\myfile.spritefont");
 
 	m_cnt = 0;
+
+	// リソース情報
+	ComPtr<ID3D11Resource> resource;
+	DX::ThrowIfFailed(
+		CreateWICTextureFromFile(m_d3dDevice.Get(), L"Resources\\cat.png",
+			resource.GetAddressOf(),
+			m_texture.ReleaseAndGetAddressOf()));
+
+	//DX::ThrowIfFailed(
+	//	CreateDDSTextureFromFile(m_d3dDevice.Get(), L"Resources\\cat.dds",
+	//		resource.GetAddressOf(),
+	//		m_texture.ReleaseAndGetAddressOf()));
+
+	// テクスチャとして設定
+	ComPtr<ID3D11Texture2D> cat;
+	DX::ThrowIfFailed(resource.As(&cat));
+
+	// テクスチャの情報を取得
+	CD3D11_TEXTURE2D_DESC catDesc;
+	cat->GetDesc(&catDesc);
+
+
+	// 原点座標を中心に変更
+	m_origin.x = float(catDesc.Width / 2);
+	m_origin.y = float(catDesc.Height / 2);
+
+	// 表示座標を画面中央に設定
+	m_screenPos.x = m_outputWidth / 2.f;
+	m_screenPos.y = m_outputHeight / 2.f;
+
 }
 
 // Executes the basic game loop.
@@ -91,17 +124,28 @@ void Game::Render()
     }
 
     Clear();
-	static float x = 0;
-	static float y = 0;
-	x += 0.1f;
-	y += 0.1f;
 
 
     // TODO: Add your rendering code here.
-	m_spriteBatch->Begin();
+	CommonStates states(m_d3dDevice.Get());
+	m_spriteBatch->Begin(SpriteSortMode_Deferred, states.NonPremultiplied());
+	// テクスチャ切り出し矩形
+	RECT rect;
+	rect.bottom = 100;
+	rect.top = 0;
+	rect.left = 0;
+	rect.right = 100;
 
-	m_spriteFont->DrawString(m_spriteBatch.get(), m_str.c_str(), XMFLOAT2(cos(x)*200, sin(y)*200),Colors::Red, m_cnt/10.0f,
+	static int angle = 0;
+	angle++;
+	// スプライトを描画
+	m_spriteBatch->Draw(m_texture.Get(), m_screenPos, &rect, Colors::White,
+		0.f, m_origin, 2.0f);
+
+	// スプライトフォントの描画
+	m_spriteFont->DrawString(m_spriteBatch.get(), m_str.c_str(), XMFLOAT2(100, 100),Colors::Red,0,
 		DirectX::SimpleMath::Vector2(0.5f, 0.5f), DirectX::SimpleMath::Vector2(3.0f, 3.0f));
+
 
 	m_spriteBatch->End();
 
@@ -399,6 +443,8 @@ void Game::OnDeviceLost()
     m_d3dContext.Reset();
     m_d3dDevice1.Reset();
     m_d3dDevice.Reset();
+
+	m_spriteBatch.reset();
 
     CreateDevice();
 
